@@ -1,0 +1,15 @@
+<html>
+	<head>
+		<meta http-equiv="refresh" content="1">
+	</head>
+	<body>
+		<div>{{.LastUpdated}}</div>
+		{{range .GetClues "0"}}
+		<div><img src="{{printf "%s" .Id}}.png"/></div>
+		{{end}}
+
+		{{range .GetClues "1"}}
+		<div><img src="{{printf "%s" .Id}}.png"/></div>
+		{{end}}
+	</body>
+</html>
