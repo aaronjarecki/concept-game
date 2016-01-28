@@ -68,7 +68,10 @@ func getNewId() string {
 
 func create(w http.ResponseWriter, r *http.Request) {
 	C := new(Context)
-	C.PuzzleId = getNewId()
+	puzzleId := getNewId()
+	fmt.Printf("New PuzzleId %s\n", puzzleId)
+	C.PuzzleId = puzzleId
+	P[puzzleId] = C
 	t,_ := template.ParseFiles("create.html")
 	err := t.Execute(w,C)
 	if err != nil {
@@ -81,9 +84,6 @@ func pushItem(w http.ResponseWriter, r *http.Request) {
 	puzzleId := r.FormValue("puzzleId")
 	clueId := r.FormValue("clueId")
 	clueKind := r.FormValue("clueKind")
-	fmt.Printf("puzzleId %s\n", puzzleId)
-	fmt.Printf("clueId %s\n", clueId)
-	fmt.Printf("clueKind %s\n", clueKind)
 
 	// update Context
 	if P[puzzleId] == nil {
@@ -95,6 +95,7 @@ func pushItem(w http.ResponseWriter, r *http.Request) {
 	C.LastUpdated = time.Now()
 
 	// debug
+	fmt.Printf("PuzzleId %s\n", puzzleId)
 	fmt.Printf("Primary %v\n", C.GetClues("0"))
 	fmt.Printf("Secondary %v\n", C.GetClues("1"))
 	fmt.Printf("Tertiary %v\n\n", C.GetClues("2"))

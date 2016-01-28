@@ -1,37 +1,14 @@
-<script>
-function PushItem(id) {
-	var kind = 0
-	var url = "http://localhost:8888/pushItem?puzzleId={{.PuzzleId}}&clueId="+id+"&clueKind="+kind
-	var xhr = new XMLHttpRequest();
-	xhr.open("GET", url, true);
-	xhr.send()
-}
-</script>
+<html>
+<head>
+<script src="create.js"></script>
+<link rel="stylesheet" href="create.css">
+</head>
+<body> 
 <div>{{.PuzzleId}}</div>
-<div style="overflow: auto">
-<div style="float: left">
-<img id="001" src="001.png" onclick="PushItem('001')"/>
-</div>
-<div style="float: left">
-<img src="002.png" onclick="PushItem('002')"/>
-</div>
-</div>
-
-<div style="overflow: auto">
-<div style="float: left">
-<img src="003.png"/>
-</div>
-<div style="float: left">
-<img src="004.png"/>
-</div>
-</div>
-
-<div style="overflow: auto">
-<div style="float: left">
-<img src="005.png"/>
-</div>
-<div style="float: left">
-<img src="006.png"/>
-</div>
-</div>
-
+<div id="Icons"></div>
+<script>
+  var loadFunc = makeIcons.bind(this,{{.PuzzleId}});
+  document.body.onload=loadFunc;
+</script>
+</body>
+</html>
