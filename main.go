@@ -67,9 +67,10 @@ func getNewId() string {
 }
 
 func create(w http.ResponseWriter, r *http.Request) {
-	C := new(Context)
 	puzzleId := getNewId()
+	NewestPuzzleId = puzzleId
 	fmt.Printf("New PuzzleId %s\n", puzzleId)
+	C := new(Context)
 	C.PuzzleId = puzzleId
 	P[puzzleId] = C
 	t,_ := template.ParseFiles("create.html")
