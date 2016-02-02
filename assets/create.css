@@ -1,7 +1,21 @@
 div.IconPairContainer {
-	overflow: auto
+	overflow: auto;
 }
 
 div.IconContainer {
-	float: left
+	float: left;
+}
+
+div#ConceptDiv0, div#ConceptDiv1, div#ConceptDiv2 {
+	overflow: auto;
+}
+
+div.IconDiv {
+	float: left;
+	margin-right: -51px;
+}
+
+img.ConceptIcon {
+	position: relative;
+	right: 51px;
 }

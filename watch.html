@@ -1,40 +1,15 @@
 <html>
-	<head>
-		<meta http-equiv="refresh" content="1">
-	</head>
-	<body>
-		<div>{{.PuzzleId}} -- {{.LastUpdated}}</div>
-<div style="overflow: auto">
-{{range .GetClues "0"}}
-<div style="float: left;margin-right: -51px">
-<img src="{{printf "%s" .Id}}.png"/>
-<img src="ico-square-0.png" style="position: relative; right: 51px"/>
-</div>
-{{end}}
-</div>
-<div style="overflow: auto">
-{{range .GetClues "1"}}
-<div style="float: left;margin-right: -51px;">
-<img src="{{printf "%s" .Id}}.png"/>
-<img src="ico-square-1.png" style="position: relative; right: 51px"/>
-</div>
-{{end}}
-</div>
-<div style="overflow: auto">
-{{range .GetClues "2"}}
-<div style="float: left;margin-right: -51px">
-<img src="{{printf "%s" .Id}}.png"/>
-<img src="ico-square-2.png" style="position: relative; right: 51px"/>
-</div>
-{{end}}
-</div>
-<div style="overflow: auto">
-{{range .GetClues "3"}}
-<div style="float: left;margin-right: -51px">
-<img src="{{printf "%s" .Id}}.png"/>
-<img src="ico-square-3.png" style="position: relative; right: 51px"/>
-</div>
-{{end}}
-</div>
-	</body>
+<head>
+	<script src="view.js"></script>
+	<link rel="stylesheet" href="create.css">
+</head>
+<body>
+	<div>{{.PuzzleId}} -- {{.LastUpdated}}</div>
+	<div id="MainView"></div>
+
+	<script>
+		var loadFunc = fillMainView.bind(this,{{.PuzzleId}});
+		document.body.onload=loadFunc;
+	</script>	
+</body>
 </html>

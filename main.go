@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"time"
 	"math/rand"
+	"encoding/json"
 )
 
 type Clue struct {
@@ -41,6 +42,15 @@ func (C *Context) GetClues(kind string) []Clue {
 		}
 	}
 	return clueSubset
+}
+
+func (C *Context) GetCluesJson(kind string) string {
+	clues := C.GetClues(kind)
+	cluesJson, err := json.Marshal(clues)
+	if err != nil {
+		fmt.Printf("Error encoding json: %s\n", err)
+	}
+	return string(cluesJson)
 }
 
 func (C *Context) toString() string {
@@ -131,6 +141,17 @@ func popItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getConcept(w http.ResponseWriter, r *http.Request) {
+	// parse args
+	puzzleId := r.FormValue("puzzleId")
+	clueKind := r.FormValue("clueKind")
+
+	C := P[puzzleId]
+	clues := C.GetCluesJson(clueKind)
+
+	fmt.Fprintf(w, clues)
+}
+
 func clear(w http.ResponseWriter, r *http.Request) {
 	// parse args
 	puzzleId := r.FormValue("puzzleId")
@@ -157,6 +178,25 @@ func watch(w http.ResponseWriter, r *http.Request) {
 
 	// output response
 	t,_ := template.ParseFiles("watch.html")
+	err := t.Execute(w, C)
+	if err != nil {
+		fmt.Printf("Error %v\n", err)
+	}
+}
+
+func view(w http.ResponseWriter, r *http.Request) {
+	// parse args
+	puzzleId := r.FormValue("puzzleId")
+
+	// get Context
+	if P[puzzleId] == nil {
+		// Error
+		fmt.Printf("Error: No such puzzle Id\n")
+	}
+	C := P[puzzleId]
+
+	// output response
+	t,_ := template.ParseFiles("view.html")
 	err := t.Execute(w, C)
 	if err != nil {
 		fmt.Printf("Error %v\n", err)
@@ -218,8 +258,12 @@ func main() {
 	http.HandleFunc("/pushItem", pushItem)
 	// popItem?puzzleId=001
 	http.HandleFunc("/popItem", popItem)
+	// pushItem?puzzleId=001&clueKind=0
+	http.HandleFunc("/getConcept", getConcept)
 	// clear?puzzleId=001
 	http.HandleFunc("/clear", clear)
+	// view?puzzleId=001
+	http.HandleFunc("/view", view)
 	// watch?puzzleId=001
 	http.HandleFunc("/watch", watch)
 	// watchRecent
