@@ -6,8 +6,16 @@ div.IconContainer {
 	float: left;
 }
 
+div.MainViewSticky {
+	display: flex;
+}
+
 div#ConceptDiv0, div#ConceptDiv1, div#ConceptDiv2 {
-	overflow: auto;
+	width: 100%
+}
+
+img.ClueImg {
+	width: 100%;
 }
 
 div.IconDiv {

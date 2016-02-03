@@ -4,10 +4,12 @@
 <link rel="stylesheet" href="create.css">
 </head>
 <body> 
-<div>{{.PuzzleId}}</div>
+<div id="MainViewSticky">
+	<div>{{.PuzzleId}}</div>
+</div>
 <div id="Icons"></div>
 <script>
-  var loadFunc = makeIcons.bind(this,{{.PuzzleId}});
+  var loadFunc = renderPage.bind(this,{{.PuzzleId}});
   document.body.onload=loadFunc;
 </script>
 </body>
