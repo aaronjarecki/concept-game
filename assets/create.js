@@ -1,16 +1,20 @@
-function getConcept(puzzleId, kind) {
+var KIND = "0"
+var CONCEPTS = {}
+var PUZZLEID = ""
+
+function getConcept(kind) {
 	var xmlHttp = new XMLHttpRequest();
 	xmlHttp.onreadystatechange = function() {
 		if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
 			updateConcept(JSON.parse(xmlHttp.responseText), kind);
 	}
-	var url = "http://localhost:8888/getConcept?puzzleId="+puzzleId+"&clueKind="+kind
+	var url = "http://localhost:8888/getConcept?puzzleId="+PUZZLEID+"&clueKind="+kind
 	xmlHttp.open("GET", url, true); // true for asynchronous 
 	xmlHttp.send(null);
 }
 
 function updateConcept(clues, kind) {
-	var mainView = document.getElementById("MainViewSticky");
+	var mainView = document.getElementById("MainView");
 	var old_outer_div = document.getElementById("ConceptDiv"+kind);
 	var outer_div = document.createElement("div");
 	outer_div.setAttribute("id","ConceptDiv"+kind);
@@ -29,16 +33,30 @@ function updateConcept(clues, kind) {
 		inner_div.appendChild(concept_img);
 		outer_div.appendChild(inner_div);
 	}
-	if (old_outer_div != null) {
-		mainView.replaceChild(outer_div,old_outer_div);	
+	for (var key in CONCEPTS) {
+		if (CONCEPTS.hasOwnProperty(key)) {
+			mainView.removeChild(CONCEPTS[key])
+		}
 	}
-	mainView.appendChild(outer_div);
+	CONCEPTS[kind] = outer_div
+	for (var key in CONCEPTS) {
+		if (CONCEPTS.hasOwnProperty(key)) {
+			mainView.appendChild(CONCEPTS[key])
+		}
+	}
 }
 
-function PushItem(puzzleId,id) {
-	var kind = 0
+function PushItem(id) {
 	id = pad(id)
-	var url = "http://localhost:8888/pushItem?puzzleId="+puzzleId+"&clueId="+id+"&clueKind="+kind
+	var url = "http://localhost:8888/pushItem?puzzleId="+PUZZLEID+"&clueId="+id+"&clueKind="+KIND
+	var xhr = new XMLHttpRequest();
+	xhr.open("GET", url, true);
+	xhr.send()
+}
+
+function popItem() {
+	id = pad(id)
+	var url = "http://localhost:8888/popItem?puzzleId="+PUZZLEID
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", url, true);
 	xhr.send()
@@ -50,44 +68,41 @@ function pad(n) {
 	return n.length >= 3 ? n : new Array(3 - n.length + 1).join(p) + n;
 }
 
-function iconPair(puzzleId,i) {
-	id1 = pad(i)
-	id2 = pad(i+1)
-	var outer_div = document.createElement("div");
-	outer_div.setAttribute("class","IconPairContainer");
-
-	var inner_div = document.createElement("div");
-	inner_div.setAttribute("class","IconContainer");
-
-	var icon_img = document.createElement("img");
-	icon_img.setAttribute("class","Icon");
-	icon_img.setAttribute("src",id1+".png");
-	icon_img.setAttribute("onclick", "PushItem('"+puzzleId+"','"+id1+"')");
-
-	inner_div.appendChild(icon_img)
-	outer_div.appendChild(inner_div)
-
-	inner_div = document.createElement("div");
-	inner_div.setAttribute("class","IconContainer");
-
-	icon_img = document.createElement("img");
-	icon_img.setAttribute("class","Icon");
-	icon_img.setAttribute("src",id2+".png");
-	icon_img.setAttribute("onclick", "PushItem('"+puzzleId+"','"+id2+"')");
-
-	inner_div.appendChild(icon_img)
-	outer_div.appendChild(inner_div)
-	var icons_div = document.getElementById("Icons")
-	icons_div.appendChild(outer_div)
+function changeKind(n) {
+	KIND = n
 }
 
-function renderPage(puzzleId) {
-	for (var i=1; i<=118; i+=2) {
-		iconPair(puzzleId,i);
+function icons(i) {
+	id = pad(i)
+	
+	var icon_img = document.createElement("img");
+	icon_img.setAttribute("class","IconImg");
+	icon_img.setAttribute("src",id+".png");
+	icon_img.setAttribute("onclick", "PushItem('"+id+"')");
+
+	var icons_div = document.getElementById("Icons")
+	icons_div.appendChild(icon_img)
+}
+
+function renderCreatePage(puzzleId) {
+	PUZZLEID = puzzleId
+	for (var i=1; i<=118; i++) {
+		icons(i);
 	}
 	setInterval(function(){
-		conceptDiv = getConcept(puzzleId, "0");
-		conceptDiv = getConcept(puzzleId, "1");
-		conceptDiv = getConcept(puzzleId, "2");
+		getConcept("0");
+		getConcept("1");
+		getConcept("2");
+		getConcept("3");
+	}, 700);
+}
+
+function renderWatchPage(puzzleId) {
+	PUZZLEID = puzzleId
+	setInterval(function(){
+		getConcept("0");
+		getConcept("1");
+		getConcept("2");
+		getConcept("3");
 	}, 700);
 }

@@ -1,16 +1,24 @@
 <html>
 <head>
-<script src="create.js"></script>
-<link rel="stylesheet" href="create.css">
+	<script src="create.js"></script>
+	<link rel="stylesheet" href="create.css">
 </head>
 <body> 
-<div id="MainViewSticky">
-	<div>{{.PuzzleId}}</div>
-</div>
-<div id="Icons"></div>
-<script>
-  var loadFunc = renderPage.bind(this,{{.PuzzleId}});
-  document.body.onload=loadFunc;
-</script>
+	<div id="MainView" class="TopFrame">
+		<div>{{.PuzzleId}}</div>
+		
+	</div>
+	<div id="Icons"></div>
+	<div id="Buttons">
+		<img src="ico-square-0.png" onclick="changeKind(0)">
+		<img src="ico-square-1.png" onclick="changeKind(1)">
+		<img src="ico-square-2.png" onclick="changeKind(2)">
+		<img src="ico-square-3.png" onclick="changeKind(3)">
+		<img src="undo.png" onclick="popItem()">
+	</div>
+	<script>
+	  var loadFunc = renderCreatePage.bind(this,{{.PuzzleId}});
+	  document.body.onload=loadFunc;
+	</script>
 </body>
 </html>

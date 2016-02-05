@@ -1,6 +1,6 @@
 <html>
 <head>
-	<script src="view.js"></script>
+	<script src="create.js"></script>
 	<link rel="stylesheet" href="create.css">
 </head>
 <body>
@@ -8,7 +8,7 @@
 	<div id="MainView"></div>
 
 	<script>
-		var loadFunc = fillMainView.bind(this,{{.PuzzleId}});
+		var loadFunc = renderWatchPage.bind(this,{{.PuzzleId}});
 		document.body.onload=loadFunc;
 	</script>	
 </body>

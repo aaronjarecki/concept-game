@@ -2,20 +2,44 @@ div.IconPairContainer {
 	overflow: auto;
 }
 
-div.IconContainer {
+img.IconImg {
+	float: left;
+	height: 318px;
+	width: 318px;
+}
+
+div#MainView {
+	clear: both;
+}
+
+div.TopFrame {
+	overflow: scroll;
+	top: 0px;
+	left: 0px;
+	width: 100%;
+	z-index: 999;
+	height: 30%;
+}
+
+div#Icons {
+	height: 70%;
+	width: 50%;
+	overflow: scroll;
 	float: left;
 }
 
-div.MainViewSticky {
-	display: flex;
+div#Buttons {
+	position: relative;
+	float: left;
 }
 
 div#ConceptDiv0, div#ConceptDiv1, div#ConceptDiv2 {
-	width: 100%
+	width: 100%;
+	clear: both;
 }
 
 img.ClueImg {
-	width: 100%;
+	overflow: auto;
 }
 
 div.IconDiv {
