@@ -4,7 +4,7 @@ function getConcept(puzzleId, kind) {
 		if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
 			updateConcept(JSON.parse(xmlHttp.responseText), kind);
 	}
-	var url = "http://localhost:8888/getConcept?puzzleId="+puzzleId+"&clueKind="+kind
+	var url = "http://concept-game.cfapps.pez.pivotal.io/getConcept?puzzleId="+puzzleId+"&clueKind="+kind
 	xmlHttp.open("GET", url, true); // true for asynchronous 
 	xmlHttp.send(null);
 }

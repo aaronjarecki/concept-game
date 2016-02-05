@@ -12,6 +12,7 @@ import (
 	"time"
 	"math/rand"
 	"encoding/json"
+	"os"
 )
 
 type Clue struct {
@@ -274,7 +275,7 @@ func main() {
 	http.HandleFunc("/load", load)
 
 	http.Handle("/", http.FileServer(http.Dir("assets")))
-	log.Fatal(http.ListenAndServe(":8888", nil))
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }
 
 func getAdjective() string {

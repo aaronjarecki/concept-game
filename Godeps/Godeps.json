@@ -1,0 +1,5 @@
+{
+	"ImportPath": "github.com/aaronjarecki/concept-game",
+	"GoVersion": "go1.5",
+	"Deps": []
+}

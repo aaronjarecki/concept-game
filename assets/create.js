@@ -8,7 +8,7 @@ function getConcept(kind) {
 		if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
 			updateConcept(JSON.parse(xmlHttp.responseText), kind);
 	}
-	var url = "http://localhost:8888/getConcept?puzzleId="+PUZZLEID+"&clueKind="+kind
+	var url = "http://concept-game.cfapps.pez.pivotal.io/getConcept?puzzleId="+PUZZLEID+"&clueKind="+kind
 	xmlHttp.open("GET", url, true); // true for asynchronous 
 	xmlHttp.send(null);
 }
@@ -48,7 +48,7 @@ function updateConcept(clues, kind) {
 
 function PushItem(id) {
 	id = pad(id)
-	var url = "http://localhost:8888/pushItem?puzzleId="+PUZZLEID+"&clueId="+id+"&clueKind="+KIND
+	var url = "http://concept-game.cfapps.pez.pivotal.io/pushItem?puzzleId="+PUZZLEID+"&clueId="+id+"&clueKind="+KIND
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", url, true);
 	xhr.send()
@@ -56,7 +56,7 @@ function PushItem(id) {
 
 function popItem() {
 	id = pad(id)
-	var url = "http://localhost:8888/popItem?puzzleId="+PUZZLEID
+	var url = "http://concept-game.cfapps.pez.pivotal.io/popItem?puzzleId="+PUZZLEID
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", url, true);
 	xhr.send()
