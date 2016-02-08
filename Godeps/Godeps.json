@@ -1,5 +1,11 @@
 {
 	"ImportPath": "github.com/aaronjarecki/concept-game",
 	"GoVersion": "go1.5",
-	"Deps": []
+	"Deps": [
+		{
+			"ImportPath": "github.com/go-sql-driver/mysql",
+			"Comment": "v1.2-171-g267b128",
+			"Rev": "267b128680c46286b9ca13475c3cca5de8f79bd7"
+		}
+	]
 }

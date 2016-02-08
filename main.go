@@ -1,35 +1,56 @@
 package main
 
 import (
-	"log"
 	"fmt"
-	"net/http"
 	"html/template"
-	// "reflect"
+	"log"
+	"net/http"
 	"strings"
-	// "strconv"
-	"io/ioutil"
-	"time"
-	"math/rand"
+	"database/sql"
 	"encoding/json"
+	"github.com/aaronjarecki/concept-game/Godeps/_workspace/src/github.com/go-sql-driver/mysql"
+	"io/ioutil"
+	"math/rand"
 	"os"
+	"time"
+	"strconv"
 )
 
+type MySQLCredentials struct {
+	Hostname 	string
+	Port		int
+	Name		string
+	Username	string
+	Password	string
+}
+
+type MySQLProperties struct {
+	Name 		string
+	Label		string
+	Plan		string
+	Credentials	MySQLCredentials
+}
+
+type VcapServices struct {
+	Pmysql 	[]MySQLProperties `json:"p-mysql"`
+}
+
 type Clue struct {
-	Id		string
-	Kind	string
+	Id   string
+	Kind string
 }
 
 type Context struct {
-	Clues []Clue
+	Clues       []Clue
 	LastUpdated time.Time
-	PuzzleId string
+	PuzzleId    string
 }
 
 type Puzzles map[string]*Context
 
 var P = make(Puzzles)
 var NewestPuzzleId string
+var DBCreds MySQLCredentials
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -49,7 +70,7 @@ func (C *Context) GetCluesJson(kind string) string {
 	clues := C.GetClues(kind)
 	cluesJson, err := json.Marshal(clues)
 	if err != nil {
-		fmt.Printf("Error encoding json: %s\n", err)
+		log.Print("Error encoding json: %s\n", err)
 	}
 	return string(cluesJson)
 }
@@ -62,11 +83,11 @@ func (C *Context) toString() string {
 	return theStr
 }
 
-func contextFromString(theStr string) *Context{
+func contextFromString(theStr string) *Context {
 	newContext := new(Context)
-	for _,c := range strings.Split(theStr, ",") {
+	for _, c := range strings.Split(theStr, ",") {
 		if c != "" {
-			parts := strings.Split(c, ":")	
+			parts := strings.Split(c, ":")
 			newContext.Clues = append(newContext.Clues, Clue{Id: parts[0], Kind: parts[1]})
 		}
 	}
@@ -80,14 +101,14 @@ func getNewId() string {
 func create(w http.ResponseWriter, r *http.Request) {
 	puzzleId := getNewId()
 	NewestPuzzleId = puzzleId
-	fmt.Printf("New PuzzleId %s\n", puzzleId)
+	log.Print("New PuzzleId %s\n", puzzleId)
 	C := new(Context)
 	C.PuzzleId = puzzleId
 	P[puzzleId] = C
-	t,_ := template.ParseFiles("create.html")
-	err := t.Execute(w,C)
+	t, _ := template.ParseFiles("create.html")
+	err := t.Execute(w, C)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		log.Print("Error %v\n", err)
 	}
 }
 
@@ -102,21 +123,21 @@ func pushItem(w http.ResponseWriter, r *http.Request) {
 		P[puzzleId] = new(Context)
 		NewestPuzzleId = puzzleId
 	}
-	C  := P[puzzleId]
+	C := P[puzzleId]
 	C.Clues = append(C.Clues, Clue{Id: clueId, Kind: clueKind})
 	C.LastUpdated = time.Now()
 
 	// debug
-	fmt.Printf("PuzzleId %s\n", puzzleId)
-	fmt.Printf("Primary %v\n", C.GetClues("0"))
-	fmt.Printf("Secondary %v\n", C.GetClues("1"))
-	fmt.Printf("Tertiary %v\n\n", C.GetClues("2"))
+	log.Print("PuzzleId %s\n", puzzleId)
+	log.Print("Primary %v\n", C.GetClues("0"))
+	log.Print("Secondary %v\n", C.GetClues("1"))
+	log.Print("Tertiary %v\n\n", C.GetClues("2"))
 
 	// output response
-	t,_ := template.ParseFiles("view.html")
+	t, _ := template.ParseFiles("view.html")
 	err := t.Execute(w, C)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		log.Print("Error %v\n", err)
 	}
 }
 
@@ -125,20 +146,20 @@ func popItem(w http.ResponseWriter, r *http.Request) {
 	puzzleId := r.FormValue("puzzleId")
 	if P[puzzleId] == nil {
 		// Error
-		fmt.Printf("Error: No such puzzle Id\n")
+		log.Print("Error: No such puzzle Id\n")
 	}
 
 	C := P[puzzleId]
-	C.Clues = C.Clues[:len(C.Clues)-1] 
-	fmt.Printf("Primary %v\n", C.GetClues("0"))
-	fmt.Printf("Secondary %v\n", C.GetClues("1"))
-	fmt.Printf("Tertiary %v\n\n", C.GetClues("2"))
+	C.Clues = C.Clues[:len(C.Clues)-1]
+	log.Print("Primary %v\n", C.GetClues("0"))
+	log.Print("Secondary %v\n", C.GetClues("1"))
+	log.Print("Tertiary %v\n\n", C.GetClues("2"))
 
 	// output response
-	t,_ := template.ParseFiles("view.html")
+	t, _ := template.ParseFiles("view.html")
 	err := t.Execute(w, C)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		log.Print("Error %v\n", err)
 	}
 }
 
@@ -159,10 +180,10 @@ func clear(w http.ResponseWriter, r *http.Request) {
 	P[puzzleId] = new(Context)
 
 	// output response
-	t,_ := template.ParseFiles("view.html")
+	t, _ := template.ParseFiles("view.html")
 	err := t.Execute(w, P[puzzleId])
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		log.Print("Error %v\n", err)
 	}
 }
 
@@ -173,15 +194,15 @@ func watch(w http.ResponseWriter, r *http.Request) {
 	// get Context
 	if P[puzzleId] == nil {
 		// Error
-		fmt.Printf("Error: No such puzzle Id\n")
+		log.Print("Error: No such puzzle Id\n")
 	}
 	C := P[puzzleId]
 
 	// output response
-	t,_ := template.ParseFiles("watch.html")
+	t, _ := template.ParseFiles("watch.html")
 	err := t.Execute(w, C)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		log.Print("Error %v\n", err)
 	}
 }
 
@@ -192,15 +213,15 @@ func view(w http.ResponseWriter, r *http.Request) {
 	// get Context
 	if P[puzzleId] == nil {
 		// Error
-		fmt.Printf("Error: No such puzzle Id\n")
+		log.Print("Error: No such puzzle Id\n")
 	}
 	C := P[puzzleId]
 
 	// output response
-	t,_ := template.ParseFiles("view.html")
+	t, _ := template.ParseFiles("view.html")
 	err := t.Execute(w, C)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		log.Print("Error %v\n", err)
 	}
 }
 
@@ -208,15 +229,15 @@ func watchRecent(w http.ResponseWriter, r *http.Request) {
 	// get Context
 	if P[NewestPuzzleId] == nil {
 		// Error
-		fmt.Printf("Error: No such puzzle Id\n")
+		log.Print("Error: No such puzzle Id\n")
 	}
 	C := P[NewestPuzzleId]
 
 	// output response
-	t,_ := template.ParseFiles("watch.html")
+	t, _ := template.ParseFiles("watch.html")
 	err := t.Execute(w, C)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		log.Print("Error %v\n", err)
 	}
 }
 
@@ -238,21 +259,52 @@ func load(w http.ResponseWriter, r *http.Request) {
 	filename := puzzleId + ".con"
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Printf("Error loading Context %s: %v", puzzleId, err)
+		log.Print("Error loading Context %s: %v", puzzleId, err)
 	}
 	C := contextFromString(string(body))
 	C.PuzzleId = puzzleId
 	P[puzzleId] = C
 
 	// output response
-	t,_ := template.ParseFiles("view.html")
+	t, _ := template.ParseFiles("view.html")
 	err = t.Execute(w, C)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		log.Print("Error %v\n", err)
+	}
+}
+
+func parseEnv() {
+	var VcapServices VcapServices
+	err := json.Unmarshal([]byte(os.Getenv("VCAP_SERVICES")), &VcapServices)
+	if err != nil {
+		log.Print("Error parsing VCAP_SERVICES: %s\n", err)
+	}
+	DBCreds = VcapServices.Pmysql[0].Credentials
+}
+
+func openDB() {
+	cfg, err := mysql.ParseDSN("")
+	if err != nil {
+		log.Fatal("Error parsing null DSN: %s\n", err)
+	}
+	cfg.User = DBCreds.Username
+	cfg.Passwd = DBCreds.Password
+	cfg.Addr = DBCreds.Hostname + ":" + strconv.Itoa(DBCreds.Port)
+	cfg.DBName = DBCreds.Name
+	db, err := sql.Open("mysql", cfg.FormatDSN())
+	if err != nil {
+		log.Fatal(err, nil)
+	}
+	if err = db.Ping(); err != nil {
+		log.Fatal(err, nil)
 	}
 }
 
 func main() {
+
+	parseEnv()
+	openDB()
+
 	// create
 	http.HandleFunc("/create", create)
 	// pushItem?puzzleId=001&clueId=001&clueKind=0
@@ -513,7 +565,7 @@ func getAdjective() string {
 }
 
 func getPokemon() string {
-	pokemon := []string {
+	pokemon := []string{
 		"Bulbasaur",
 		"Ivysaur",
 		"Venusaur",
