@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/aaronjarecki/concept-game/Godeps/_workspace/src/github.com/go-sql-driver/mysql"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"time"
@@ -51,6 +50,7 @@ type Puzzles map[string]*Context
 var P = make(Puzzles)
 var NewestPuzzleId string
 var DBCreds MySQLCredentials
+var DB *sql.DB
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -245,28 +245,30 @@ func save(w http.ResponseWriter, r *http.Request) {
 	// parse args
 	puzzleId := r.FormValue("puzzleId")
 
-	// save context to file
+	// save to db
 	str := P[puzzleId].toString()
-	filename := puzzleId + ".con"
-	ioutil.WriteFile(filename, []byte(str), 0600)
+	_, err := DB.Exec("INSERT INTO puzzles(ident, clues) VALUES(?, ?)", puzzleId, str)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func load(w http.ResponseWriter, r *http.Request) {
 	// parse args
 	puzzleId := r.FormValue("puzzleId")
 
-	// get Context from file
-	filename := puzzleId + ".con"
-	body, err := ioutil.ReadFile(filename)
+	var clueStr string
+	err := DB.QueryRow("select clues from puzzles where ident = ?", puzzleId).Scan(&clueStr)
 	if err != nil {
-		log.Print("Error loading Context %s: %v", puzzleId, err)
+		log.Fatal(err)
 	}
-	C := contextFromString(string(body))
+
+	C := contextFromString(clueStr)
 	C.PuzzleId = puzzleId
 	P[puzzleId] = C
 
 	// output response
-	t, _ := template.ParseFiles("view.html")
+	t, _ := template.ParseFiles("watch.html")
 	err = t.Execute(w, C)
 	if err != nil {
 		log.Print("Error %v\n", err)
@@ -282,7 +284,7 @@ func parseEnv() {
 	DBCreds = VcapServices.Pmysql[0].Credentials
 }
 
-func openDB() {
+func openDB() *sql.DB {
 	cfg, err := mysql.ParseDSN("")
 	if err != nil {
 		log.Fatal("Error parsing null DSN: %s\n", err)
@@ -298,12 +300,18 @@ func openDB() {
 	if err = db.Ping(); err != nil {
 		log.Fatal(err, nil)
 	}
+
+	_, err = db.Exec("CREATE TABLE puzzles (ident TEXT, clues MEDIUMTEXT)")
+	if err != nil && !strings.Contains(err.Error(), "Table 'puzzles' already exists"){
+		log.Fatal(err, nil)
+	}
+
+	return db
 }
 
 func main() {
-
 	parseEnv()
-	openDB()
+	DB = openDB()
 
 	// create
 	http.HandleFunc("/create", create)
