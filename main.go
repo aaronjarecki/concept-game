@@ -15,9 +15,9 @@ import (
 	"strconv"
 	"image/draw"
 	"image"
-	"image/color"
 	"image/png"
 	"bytes"
+	"bufio"
 )
 
 type MySQLCredentials struct {
@@ -103,38 +103,66 @@ func getNewId() string {
 	return getAdjective() + "-" + getAdjective() + "-" + getPokemon()
 }
 
-func getNumOfEachKind(C Context) map[string]int {
-	kinds := make(map[string]int)
+func getCluesOfEachKind(C Context) map[string][]Clue {
+	kinds := make(map[string][]Clue)
 	for _,c := range C.Clues {
-		kinds[c.Kind]++
+		kinds[c.Kind] = append(kinds[c.Kind], c)
 	}
 	return kinds
 }
 
+func getImage(id string) image.Image {
+	f, err := os.Open("assets/"+id+".png")
+	if err != nil {
+	    log.Fatal(err)
+	}
+	defer f.Close()
+	img, _, err := image.Decode(bufio.NewReader(f))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return img
+}
+
 func (C *Context) outputContextAsPNG(w http.ResponseWriter) {
-	kinds := getNumOfEachKind(*C)
+	kinds := getCluesOfEachKind(*C)
+
+	// Make base image of correct size
 	maxHeight := len(kinds)
 	maxWidth := 0
-	for _,k := range kinds {
-		if k > maxWidth {
-			maxWidth = k
+	for _,clues := range kinds {
+		if len(clues) > maxWidth {
+			maxWidth = len(clues)
 		}
 	}
 	maxHeight = maxHeight * 322
 	maxWidth = maxWidth * 322
+	base := image.NewRGBA(image.Rect(0, 0, maxWidth, maxHeight))
+	draw.Draw(base, base.Bounds(), image.Transparent, image.ZP, draw.Src)
 
-	m := image.NewRGBA(image.Rect(0, 0, maxWidth, maxHeight))
-	blue := color.RGBA{0, 0, 255, 255}
-	draw.Draw(m, m.Bounds(), &image.Uniform{blue}, image.ZP, draw.Src)
+	// Add concepts to image
+	for kind := 0; kind < 4; kind++ {
+		kindstr := strconv.Itoa(kind)
+		yPt := kind*320 + 2
+		for i, c := range kinds[kindstr] {
+			xPt := i*320 + 2
+			offset := image.Pt(xPt, yPt)
+			log.Print(offset.String())
+			img := getImage(c.Id)
+			draw.Draw(base, img.Bounds().Add(offset), img, image.ZP, draw.Src)
+		}
+	}
 
-	buffer := new(bytes.Buffer)
-	if err := png.Encode(buffer, m); err != nil {
+	// Encode image as PNG
+	pngEncoding := new(bytes.Buffer)
+	if err := png.Encode(pngEncoding, base); err != nil {
 		log.Print("unable to encode image.")
 	}
 
+	// Output png encoding
 	w.Header().Set("Content-Type", "image/png")
-	w.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
-	if _, err := w.Write(buffer.Bytes()); err != nil {
+	w.Header().Set("Content-Length", strconv.Itoa(len(pngEncoding.Bytes())))
+	if _, err := w.Write(pngEncoding.Bytes()); err != nil {
 		log.Print("unable to write image.")
 	}
 }
