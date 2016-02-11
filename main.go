@@ -16,6 +16,8 @@ import (
 	"image/draw"
 	"image"
 	"image/color"
+	"image/png"
+	"bytes"
 )
 
 type MySQLCredentials struct {
@@ -101,10 +103,40 @@ func getNewId() string {
 	return getAdjective() + "-" + getAdjective() + "-" + getPokemon()
 }
 
-func drawImage(w http.ResponseWriter, r *http.Request) {
-	m := image.NewRGBA(image.Rect(0, 0, 640, 480))
+func getNumOfEachKind(C Context) map[string]int {
+	kinds := make(map[string]int)
+	for _,c := range C.Clues {
+		kinds[c.Kind]++
+	}
+	return kinds
+}
+
+func (C *Context) outputContextAsPNG(w http.ResponseWriter) {
+	kinds := getNumOfEachKind(*C)
+	maxHeight := len(kinds)
+	maxWidth := 0
+	for _,k := range kinds {
+		if k > maxWidth {
+			maxWidth = k
+		}
+	}
+	maxHeight = maxHeight * 322
+	maxWidth = maxWidth * 322
+
+	m := image.NewRGBA(image.Rect(0, 0, maxWidth, maxHeight))
 	blue := color.RGBA{0, 0, 255, 255}
 	draw.Draw(m, m.Bounds(), &image.Uniform{blue}, image.ZP, draw.Src)
+
+	buffer := new(bytes.Buffer)
+	if err := png.Encode(buffer, m); err != nil {
+		log.Print("unable to encode image.")
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
+	if _, err := w.Write(buffer.Bytes()); err != nil {
+		log.Print("unable to write image.")
+	}
 }
 
 func create(w http.ResponseWriter, r *http.Request) {
@@ -218,6 +250,7 @@ func watch(w http.ResponseWriter, r *http.Request) {
 func view(w http.ResponseWriter, r *http.Request) {
 	// parse args
 	puzzleId := r.FormValue("puzzleId")
+	asPng := r.FormValue("asPng")
 
 	// get Context
 	if P[puzzleId] == nil {
@@ -226,11 +259,15 @@ func view(w http.ResponseWriter, r *http.Request) {
 	}
 	C := P[puzzleId]
 
-	// output response
-	t, _ := template.ParseFiles("view.html")
-	err := t.Execute(w, C)
-	if err != nil {
-		log.Print("Error %v\n", err)
+	if asPng != "" && asPng != "false" {
+		C.outputContextAsPNG(w)
+	} else {
+		// output response
+		t, _ := template.ParseFiles("view.html")
+		err := t.Execute(w, C)
+		if err != nil {
+			log.Print("Error %v\n", err)
+		}
 	}
 }
 

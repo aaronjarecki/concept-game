@@ -1,10 +1,13 @@
-function getConcept(puzzleId, kind) {
+var CONCEPTS = {}
+var PUZZLEID = ""
+
+function getConcept(kind) {
 	var xmlHttp = new XMLHttpRequest();
 	xmlHttp.onreadystatechange = function() {
 		if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
 			updateConcept(JSON.parse(xmlHttp.responseText), kind);
 	}
-	var url = "http://concept-game.cfapps.pez.pivotal.io/getConcept?puzzleId="+puzzleId+"&clueKind="+kind
+	var url = "http://concept-game.cfapps.pez.pivotal.io/getConcept?puzzleId="+PUZZLEID+"&clueKind="+kind
 	xmlHttp.open("GET", url, true); // true for asynchronous 
 	xmlHttp.send(null);
 }
@@ -19,6 +22,7 @@ function updateConcept(clues, kind) {
 		inner_div.setAttribute("class","IconDiv");
 
 		var clue_img = document.createElement("img");
+		clue_img.setAttribute("class","ClueImg");
 		clue_img.setAttribute("src",clues[i].Id+".png");
 		var concept_img = document.createElement('img');
 		concept_img.setAttribute("class","ConceptIcon");
@@ -28,16 +32,23 @@ function updateConcept(clues, kind) {
 		inner_div.appendChild(concept_img);
 		outer_div.appendChild(inner_div);
 	}
-	if (old_outer_div != null) {
-		mainView.replaceChild(outer_div,old_outer_div);	
+	for (var key in CONCEPTS) {
+		if (CONCEPTS.hasOwnProperty(key)) {
+			mainView.removeChild(CONCEPTS[key])
+		}
 	}
-	mainView.appendChild(outer_div);
+	CONCEPTS[kind] = outer_div
+	for (var key in CONCEPTS) {
+		if (CONCEPTS.hasOwnProperty(key)) {
+			mainView.appendChild(CONCEPTS[key])
+		}
+	}
 }
 
 function fillMainView(puzzleId) {
-	setInterval(function(){
-		conceptDiv = getConcept(puzzleId, "0");
-		conceptDiv = getConcept(puzzleId, "1");
-		conceptDiv = getConcept(puzzleId, "2");
-	}, 700);
+	PUZZLEID = puzzleId
+	conceptDiv = getConcept("0");
+	conceptDiv = getConcept("1");
+	conceptDiv = getConcept("2");
+	conceptDiv = getConcept("3");
 }
