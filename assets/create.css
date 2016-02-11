@@ -2,6 +2,14 @@ div.IconPairContainer {
 	overflow: auto;
 }
 
+.float {
+	float: left;
+}
+
+.clear {
+	clear: right;
+}
+
 img.IconImg {
 	float: left;
 	height: 318px;

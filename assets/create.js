@@ -46,6 +46,20 @@ function updateConcept(clues, kind) {
 	}
 }
 
+function savePuzzle() {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+			document.getElementById("LinkTo").innerHTML = "<a href='http://concept-game.cfapps.pez.pivotal.io/view?puzzleId="+PUZZLEID+"'>http://concept-game.cfapps.pez.pivotal.io/view?puzzleId="+PUZZLEID+"</a>";
+		}
+	}
+	var author = document.getElementById("Author").value
+	var solution = document.getElementById("Solution").value
+	var url = "http://concept-game.cfapps.pez.pivotal.io/save?puzzleId="+PUZZLEID+"&author="+author+"&solution="+solution
+	xmlHttp.open("GET", url, true); // true for asynchronous 
+	xmlHttp.send(null);
+}
+
 function PushItem(id) {
 	id = pad(id)
 	var url = "http://concept-game.cfapps.pez.pivotal.io/pushItem?puzzleId="+PUZZLEID+"&clueId="+id+"&clueKind="+KIND

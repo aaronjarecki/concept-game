@@ -317,22 +317,29 @@ func watchRecent(w http.ResponseWriter, r *http.Request) {
 
 func save(w http.ResponseWriter, r *http.Request) {
 	// parse args
+	log.Print("Got Save")
 	puzzleId := r.FormValue("puzzleId")
+	solution := r.FormValue("solution")
+	author := r.FormValue("author")
+
+	log.Print("PuzzleId: %s\nSolution: %s\nAuthor: %s\n", puzzleId, solution, author)
 
 	// save to db
 	str := P[puzzleId].toString()
-	_, err := DB.Exec("INSERT INTO puzzles(ident, clues) VALUES(?, ?)", puzzleId, str)
+	log.Print("Saving string %s\n", str)
+	_, err := DB.Exec("INSERT INTO puzzles(ident, author, solution, clues) VALUES(?, ?, ?, ?)", puzzleId, author, solution, str)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Print("Saved puzzle %s:\nAuthor: %s\nSolution:%s\n", puzzleId, author, solution)
 }
 
 func load(w http.ResponseWriter, r *http.Request) {
 	// parse args
 	puzzleId := r.FormValue("puzzleId")
 
-	var clueStr string
-	err := DB.QueryRow("select clues from puzzles where ident = ?", puzzleId).Scan(&clueStr)
+	var author, solution, clueStr string
+	err := DB.QueryRow("select author, solution, clues from puzzles where ident = ?", puzzleId).Scan(&author,&solution,&clueStr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -342,6 +349,7 @@ func load(w http.ResponseWriter, r *http.Request) {
 	P[puzzleId] = C
 
 	// output response
+	log.Print("Loaded puzzle %s:\nAuthor: %s\nSolution:%s\n", puzzleId, author, solution)
 	t, _ := template.ParseFiles("watch.html")
 	err = t.Execute(w, C)
 	if err != nil {
@@ -374,8 +382,7 @@ func openDB() *sql.DB {
 	if err = db.Ping(); err != nil {
 		log.Fatal(err, nil)
 	}
-
-	_, err = db.Exec("CREATE TABLE puzzles (ident TEXT, clues MEDIUMTEXT)")
+	_, err = db.Exec("CREATE TABLE puzzles (ident TEXT, author TEXT, solution TEXT, clues MEDIUMTEXT)")
 	if err != nil && !strings.Contains(err.Error(), "Table 'puzzles' already exists"){
 		log.Fatal(err, nil)
 	}
