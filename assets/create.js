@@ -23,7 +23,7 @@ function updateConcept(clues, kind) {
 		inner_div.setAttribute("class","IconDiv");
 
 		var clue_img = document.createElement("img");
-		clue_img.setAttribute("class","ClueImg");
+		clue_img.setAttribute("class","IconImg");
 		clue_img.setAttribute("src",clues[i].Id+".png");
 		var concept_img = document.createElement('img');
 		concept_img.setAttribute("class","ConceptIcon");
@@ -63,17 +63,31 @@ function savePuzzle() {
 function PushItem(id) {
 	id = pad(id)
 	var url = "http://concept-game.cfapps.pez.pivotal.io/pushItem?puzzleId="+PUZZLEID+"&clueId="+id+"&clueKind="+KIND
-	var xhr = new XMLHttpRequest();
-	xhr.open("GET", url, true);
-	xhr.send()
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+			document.getElementById("MainView").removeAttribute("src")
+			document.getElementById("MainView").setAttribute("src", "/view?puzzleId="+PUZZLEID+"&asPng=true&timestamp="+new Date().getTime());
+		}
+
+	}
+	xmlHttp.open("GET", url, true);
+	xmlHttp.send()
 }
 
 function popItem() {
 	id = pad(id)
 	var url = "http://concept-game.cfapps.pez.pivotal.io/popItem?puzzleId="+PUZZLEID
-	var xhr = new XMLHttpRequest();
-	xhr.open("GET", url, true);
-	xhr.send()
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+			document.getElementById("MainView").removeAttribute("src")
+			document.getElementById("MainView").setAttribute("src", "/view?puzzleId="+PUZZLEID+"&asPng=true&timestamp="+new Date().getTime());
+		}
+
+	}
+	xmlHttp.open("GET", url, true);
+	xmlHttp.send()
 }
 
 function pad(n) {
@@ -103,12 +117,6 @@ function renderCreatePage(puzzleId) {
 	for (var i=1; i<=118; i++) {
 		icons(i);
 	}
-	setInterval(function(){
-		getConcept("0");
-		getConcept("1");
-		getConcept("2");
-		getConcept("3");
-	}, 700);
 }
 
 function renderWatchPage(puzzleId) {

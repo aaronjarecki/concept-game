@@ -22,7 +22,7 @@ function updateConcept(clues, kind) {
 		inner_div.setAttribute("class","IconDiv");
 
 		var clue_img = document.createElement("img");
-		clue_img.setAttribute("class","ClueImg");
+		clue_img.setAttribute("class","IconImg");
 		clue_img.setAttribute("src",clues[i].Id+".png");
 		var concept_img = document.createElement('img');
 		concept_img.setAttribute("class","ConceptIcon");

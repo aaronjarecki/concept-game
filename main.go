@@ -111,17 +111,41 @@ func getCluesOfEachKind(C Context) map[string][]Clue {
 	return kinds
 }
 
-func getImage(id string) image.Image {
+func getClueImage(id string) image.Image {
 	f, err := os.Open("assets/"+id+".png")
 	if err != nil {
-	    log.Fatal(err)
+	    log.Print(err)
 	}
 	defer f.Close()
 	img, _, err := image.Decode(bufio.NewReader(f))
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 	return img
+}
+
+func getConImage(kind string) image.Image {
+	f, err := os.Open("assets/ico-square-"+kind+".png")
+	if err != nil {
+	    log.Print(err)
+	}
+	defer f.Close()
+	img, _, err := image.Decode(bufio.NewReader(f))
+	if err != nil {
+		log.Print(err)
+	}
+	return img
+}
+
+func getClueImageWithCon(id string, kind string) image.Image {
+	clueImg := getClueImage(id)
+	conImg := getConImage(kind)
+	clueMaxPt := clueImg.Bounds().Max
+	conImgOffset := clueMaxPt.Sub(conImg.Bounds().Max)
+	base := image.NewRGBA(clueImg.Bounds())
+	draw.Draw(base, clueImg.Bounds(), clueImg, image.ZP, draw.Src)
+	draw.Draw(base, conImg.Bounds().Add(conImgOffset), conImg, image.ZP, draw.Src)
+	return base
 }
 
 func (C *Context) outputContextAsPNG(w http.ResponseWriter) {
@@ -137,19 +161,26 @@ func (C *Context) outputContextAsPNG(w http.ResponseWriter) {
 	}
 	maxHeight = maxHeight * 322
 	maxWidth = maxWidth * 322
+	if maxHeight == 0 || maxWidth == 0 {
+		maxHeight = 1
+		maxWidth = 1
+	}
 	base := image.NewRGBA(image.Rect(0, 0, maxWidth, maxHeight))
 	draw.Draw(base, base.Bounds(), image.Transparent, image.ZP, draw.Src)
 
 	// Add concepts to image
+	yPt := 2
 	for kind := 0; kind < 4; kind++ {
 		kindstr := strconv.Itoa(kind)
-		yPt := kind*320 + 2
 		for i, c := range kinds[kindstr] {
 			xPt := i*320 + 2
 			offset := image.Pt(xPt, yPt)
 			log.Print(offset.String())
-			img := getImage(c.Id)
-			draw.Draw(base, img.Bounds().Add(offset), img, image.ZP, draw.Src)
+			clueImg := getClueImageWithCon(c.Id, kindstr)
+			draw.Draw(base, clueImg.Bounds().Add(offset), clueImg, image.ZP, draw.Src)
+		}
+		if len(kinds[kindstr]) > 0 {
+			yPt += 322
 		}
 	}
 
@@ -281,11 +312,20 @@ func view(w http.ResponseWriter, r *http.Request) {
 	asPng := r.FormValue("asPng")
 
 	// get Context
-	if P[puzzleId] == nil {
-		// Error
-		log.Print("Error: No such puzzle Id\n")
+	var C *Context
+	C, ok := P[puzzleId]
+	if !ok {
+		log.Print("Request for %s\nGoing to load from DB\n", puzzleId)
+		var author, solution, clueStr string
+		if err := loadFromDB(puzzleId, &author, &solution, &clueStr); err != nil {
+			log.Print(err)
+		} else {
+			log.Print("Got Clue String %s\n", clueStr)
+			C = contextFromString(clueStr)
+			C.PuzzleId = puzzleId
+			P[puzzleId] = C
+		}
 	}
-	C := P[puzzleId]
 
 	if asPng != "" && asPng != "false" {
 		C.outputContextAsPNG(w)
@@ -315,33 +355,45 @@ func watchRecent(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func save(w http.ResponseWriter, r *http.Request) {
+func saveToDB(puzzleId string, author string, solution string) error {
+	// save to db
+	str := P[puzzleId].toString()
+	_, err := DB.Exec("INSERT INTO puzzles(ident, author, solution, clues) VALUES(?, ?, ?, ?)", puzzleId, author, solution, str)
+	return err
+}
+
+func saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse args
-	log.Print("Got Save")
 	puzzleId := r.FormValue("puzzleId")
 	solution := r.FormValue("solution")
 	author := r.FormValue("author")
+	if solution == "" {
+		solution = "none"
+	}
+	if author == "" {
+		author = "anonymous"
+	}
 
 	log.Print("PuzzleId: %s\nSolution: %s\nAuthor: %s\n", puzzleId, solution, author)
 
 	// save to db
-	str := P[puzzleId].toString()
-	log.Print("Saving string %s\n", str)
-	_, err := DB.Exec("INSERT INTO puzzles(ident, author, solution, clues) VALUES(?, ?, ?, ?)", puzzleId, author, solution, str)
-	if err != nil {
-		log.Fatal(err)
+	if err := saveToDB(puzzleId, author, solution); err != nil {
+		log.Print(err)
 	}
 	log.Print("Saved puzzle %s:\nAuthor: %s\nSolution:%s\n", puzzleId, author, solution)
 }
 
-func load(w http.ResponseWriter, r *http.Request) {
+func loadFromDB(puzzleId string, author *string, solution *string, clueStr *string) error {
+	return DB.QueryRow("select author, solution, clues from puzzles where ident = ?", puzzleId).Scan(author,solution,clueStr)
+}
+
+func loadHandler(w http.ResponseWriter, r *http.Request) {
 	// parse args
 	puzzleId := r.FormValue("puzzleId")
 
 	var author, solution, clueStr string
-	err := DB.QueryRow("select author, solution, clues from puzzles where ident = ?", puzzleId).Scan(&author,&solution,&clueStr)
-	if err != nil {
-		log.Fatal(err)
+	if err := loadFromDB(puzzleId, &author, &solution, &clueStr); err != nil {
+		log.Print(err)
 	}
 
 	C := contextFromString(clueStr)
@@ -351,10 +403,56 @@ func load(w http.ResponseWriter, r *http.Request) {
 	// output response
 	log.Print("Loaded puzzle %s:\nAuthor: %s\nSolution:%s\n", puzzleId, author, solution)
 	t, _ := template.ParseFiles("watch.html")
-	err = t.Execute(w, C)
+	if err := t.Execute(w, C); err != nil {
+		log.Print("Error %v\n", err)
+	}
+}
+
+func dbBrowse(w http.ResponseWriter, r *http.Request) {
+	puzzles := make([]map[string]string, 0, 100000)
+	var puzzleId, author, solution string
+	rows, err := DB.Query("select ident, author, solution from puzzles")
+	if err != nil {
+		log.Print(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(&puzzleId, &author, &solution); err == nil {
+			puzzles = append(puzzles, map[string]string{"puzzleId":puzzleId,"author":author,"solution":solution})
+		} else {
+			log.Print(err)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		log.Print(err)
+	}
+
+	// output response
+	log.Print("Loaded %s puzzles\n", len(puzzles))
+	t, _ := template.ParseFiles("dbBrowse.html")
+	err = t.Execute(w, puzzles)
 	if err != nil {
 		log.Print("Error %v\n", err)
 	}
+}
+
+func dbClear(w http.ResponseWriter, r *http.Request) {
+	_, err := DB.Exec("truncate puzzles")
+	if err != nil {
+		log.Print(err)
+	}
+	log.Print("Removed all records from puzzle table\n")
+}
+
+func deletePuzzle(w http.ResponseWriter, r *http.Request) {
+	// parse args
+	puzzleId := r.FormValue("puzzleId")
+
+	_, err := DB.Exec("delete from puzzles where ident = ?", puzzleId)
+	if err != nil {
+		log.Print(err)
+	}
+	log.Print("Removed %s from DB\n")
 }
 
 func parseEnv() {
@@ -369,7 +467,7 @@ func parseEnv() {
 func openDB() *sql.DB {
 	cfg, err := mysql.ParseDSN("")
 	if err != nil {
-		log.Fatal("Error parsing null DSN: %s\n", err)
+		log.Print("Error parsing null DSN: %s\n", err)
 	}
 	cfg.User = DBCreds.Username
 	cfg.Passwd = DBCreds.Password
@@ -377,16 +475,16 @@ func openDB() *sql.DB {
 	cfg.DBName = DBCreds.Name
 	db, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
-		log.Fatal(err, nil)
+		log.Print(err, nil)
 	}
 	if err = db.Ping(); err != nil {
-		log.Fatal(err, nil)
+		log.Print(err, nil)
 	}
-	_, err = db.Exec("CREATE TABLE puzzles (ident TEXT, author TEXT, solution TEXT, clues MEDIUMTEXT)")
+	_, err = db.Exec("DROP TABLE puzzles")
+	_, err = db.Exec("CREATE TABLE puzzles (ident VARCHAR(50) UNIQUE NOT NULL, author TEXT, solution TEXT, clues MEDIUMTEXT)")
 	if err != nil && !strings.Contains(err.Error(), "Table 'puzzles' already exists"){
-		log.Fatal(err, nil)
+		log.Print(err, nil)
 	}
-
 	return db
 }
 
@@ -411,12 +509,18 @@ func main() {
 	// watchRecent
 	http.HandleFunc("/watchRecent", watchRecent)
 	// save?puzzleId=001
-	http.HandleFunc("/save", save)
+	http.HandleFunc("/save", saveHandler)
 	// load?puzzleId=001
-	http.HandleFunc("/load", load)
+	http.HandleFunc("/load", loadHandler)
+	// dbBrowse
+	http.HandleFunc("/dbBrowse", dbBrowse)
+	// dbBrowse
+	http.HandleFunc("/dbClear", dbClear)
+	// dbBrowse
+	http.HandleFunc("/deletePuzzle", deletePuzzle)
 
 	http.Handle("/", http.FileServer(http.Dir("assets")))
-	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
+	log.Print(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }
 
 func getAdjective() string {

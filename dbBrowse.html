@@ -1,0 +1,20 @@
+<html>
+<head>
+</head>
+<body>
+	<table>
+		<tr>
+			<th>PuzzleId</th>
+			<th>Author</th>
+			<th>Solution</th>
+		</tr>
+		{{range .}}
+		<tr>
+			<td><a href="/view?puzzleId={{.puzzleId}}">{{.puzzleId}}</a></td>
+			<td>{{.author}}</td>
+			<td style="color: black; background-color: black">{{.solution}}</td>
+		</tr>
+		{{end}}
+	</table>
+</body>
+</html>

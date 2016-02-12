@@ -4,29 +4,29 @@
 	<link rel="stylesheet" href="create.css">
 </head>
 <body> 
-	<div id="MainView" class="TopFrame">
+	<div class="TopFrame">
 		<div>{{.PuzzleId}}</div>
-		
+		<img id="MainView" src="/view?puzzleId={{.PuzzleId}}&asPng=true"/>
+		<div id="Buttons">
+			<img src="ico-square-0.png" onclick="changeKind(0)">
+			<img src="ico-square-1.png" onclick="changeKind(1)">
+			<img src="ico-square-2.png" onclick="changeKind(2)">
+			<img src="ico-square-3.png" onclick="changeKind(3)">
+			<img src="undo.png" onclick="popItem()">
+			<div>
+				Solution:
+				<textarea id="Solution"></textarea>
+				Author:
+				<textarea id="Author"></textarea>
+				<img src="save.png" onclick="savePuzzle()">
+			</div>
+			<div>
+				Link:
+				<div id="LinkTo"></div>
+			</div>
+		</div>
 	</div>
 	<div id="Icons"></div>
-	<div id="Buttons">
-		<img class="float" src="ico-square-0.png" onclick="changeKind(0)">
-		<img class="float" src="ico-square-1.png" onclick="changeKind(1)">
-		<img class="float" src="ico-square-2.png" onclick="changeKind(2)">
-		<img class="float" src="ico-square-3.png" onclick="changeKind(3)">
-		<img class="float clear" src="undo.png" onclick="popItem()">
-		<div class="float clear">
-			Solution:
-			<textarea id="Solution"></textarea>
-			Author:
-			<textarea id="Author"></textarea>
-			<img class="float clear" src="save.png" onclick="savePuzzle()">
-		</div>
-		<div class="float clear">
-			Link:
-			<div id="LinkTo" style="float: left;clear: both"></div>
-		</div>
-	</div>
 	<script>
 	  var loadFunc = renderCreatePage.bind(this,{{.PuzzleId}});
 	  document.body.onload=loadFunc;
