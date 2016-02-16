@@ -480,7 +480,6 @@ func openDB() *sql.DB {
 	if err = db.Ping(); err != nil {
 		log.Print(err, nil)
 	}
-	_, err = db.Exec("DROP TABLE puzzles")
 	_, err = db.Exec("CREATE TABLE puzzles (ident VARCHAR(50) UNIQUE NOT NULL, author TEXT, solution TEXT, clues MEDIUMTEXT)")
 	if err != nil && !strings.Contains(err.Error(), "Table 'puzzles' already exists"){
 		log.Print(err, nil)
