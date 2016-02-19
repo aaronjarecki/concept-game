@@ -2,3 +2,4 @@ concept-game
 assets/*.png
 cf
 *.con
+*/_workspace/*

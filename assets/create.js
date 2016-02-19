@@ -50,7 +50,7 @@ function savePuzzle() {
 	var xmlHttp = new XMLHttpRequest();
 	xmlHttp.onreadystatechange = function() {
 		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-			document.getElementById("LinkTo").innerHTML = "<a href='http://concept-game.cfapps.pez.pivotal.io/view?puzzleId="+PUZZLEID+"'>http://concept-game.cfapps.pez.pivotal.io/view?puzzleId="+PUZZLEID+"</a>";
+			document.getElementById("LinkTo").innerHTML = "<a href='http://concept-game.cfapps.pez.pivotal.io/view?asPng=true&puzzleId="+PUZZLEID+"'>http://concept-game.cfapps.pez.pivotal.io/view?asPng=true&puzzleId="+PUZZLEID+"</a>";
 		}
 	}
 	var author = document.getElementById("Author").value
