@@ -6,10 +6,6 @@
 			"ImportPath": "github.com/go-sql-driver/mysql",
 			"Comment": "v1.2-171-g267b128",
 			"Rev": "267b128680c46286b9ca13475c3cca5de8f79bd7"
-		},
-		{
-			"ImportPath": "golang.org/x/net/html",
-			"Rev": "b6d7b1396ec874c3b00f6c84cd4301a17c56c8ed"
 		}
 	]
 }

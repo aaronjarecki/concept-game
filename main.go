@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/html"
 	"html/template"
 	"image"
 	"image/draw"
@@ -15,6 +14,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
@@ -63,6 +63,7 @@ type Puzzles map[string]*Context
 
 var P = make(Puzzles)
 var NewestPuzzleId string
+var WikiList = make([]wikiListItem, 0, 5000)
 var DBCreds MySQLCredentials
 var DB *sql.DB
 
@@ -123,12 +124,12 @@ func getCluesOfEachKind(C Context) map[string][]Clue {
 func getClueImage(id string) image.Image {
 	f, err := os.Open("assets/" + id + ".png")
 	if err != nil {
-		log.Printf(err)
+		log.Printf("Error opening image file: %s\n", err)
 	}
 	defer f.Close()
 	img, _, err := image.Decode(bufio.NewReader(f))
 	if err != nil {
-		log.Printf(err)
+		log.Printf("Error decoding image file: %s\n", err)
 	}
 	return img
 }
@@ -136,12 +137,12 @@ func getClueImage(id string) image.Image {
 func getConImage(kind string) image.Image {
 	f, err := os.Open("assets/ico-square-" + kind + ".png")
 	if err != nil {
-		log.Printf(err)
+		log.Printf("Error opening icon file: %s\n", err)
 	}
 	defer f.Close()
 	img, _, err := image.Decode(bufio.NewReader(f))
 	if err != nil {
-		log.Printf(err)
+		log.Printf("Error decoding icon file: %s\n", err)
 	}
 	return img
 }
@@ -327,7 +328,7 @@ func view(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Request for %s\nGoing to load from DB\n", puzzleId)
 		var author, solution, clueStr string
 		if err := loadFromDB(puzzleId, &author, &solution, &clueStr); err != nil {
-			log.Printf(err)
+			log.Printf("Error loading from DB: %s\n", err)
 		} else {
 			log.Printf("Got Clue String %s\n", clueStr)
 			C = contextFromString(clueStr)
@@ -387,7 +388,7 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 
 	// save to db
 	if err := saveToDB(puzzleId, author, solution); err != nil {
-		log.Printf(err)
+		log.Printf("Error saving to DB: %s\n", err)
 	}
 	log.Printf("Saved puzzle %s:\nAuthor: %s\nSolution:%s\n", puzzleId, author, solution)
 }
@@ -402,7 +403,7 @@ func loadHandler(w http.ResponseWriter, r *http.Request) {
 
 	var author, solution, clueStr string
 	if err := loadFromDB(puzzleId, &author, &solution, &clueStr); err != nil {
-		log.Printf(err)
+		log.Printf("Error loading from DB: %s\n", err)
 	}
 
 	C := contextFromString(clueStr)
@@ -422,18 +423,18 @@ func dbBrowse(w http.ResponseWriter, r *http.Request) {
 	var puzzleId, author, solution string
 	rows, err := DB.Query("select ident, author, solution from puzzles")
 	if err != nil {
-		log.Printf(err)
+		log.Printf("Error browsing DB: %s\n", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(&puzzleId, &author, &solution); err == nil {
 			puzzles = append(puzzles, map[string]string{"puzzleId": puzzleId, "author": author, "solution": solution})
 		} else {
-			log.Printf(err)
+			log.Printf("Error scaning DB results: %s\n", err)
 		}
 	}
 	if err = rows.Err(); err != nil {
-		log.Printf(err)
+		log.Printf("DB Error: %s\n", err)
 	}
 
 	// output response
@@ -448,7 +449,7 @@ func dbBrowse(w http.ResponseWriter, r *http.Request) {
 func dbClear(w http.ResponseWriter, r *http.Request) {
 	_, err := DB.Exec("truncate puzzles")
 	if err != nil {
-		log.Printf(err)
+		log.Printf("Error clearing DB: %s\n", err)
 	}
 	log.Printf("Removed all records from puzzle table\n")
 }
@@ -459,97 +460,148 @@ func deletePuzzle(w http.ResponseWriter, r *http.Request) {
 
 	_, err := DB.Exec("delete from puzzles where ident = ?", puzzleId)
 	if err != nil {
-		log.Printf(err)
+		log.Printf("Error removing puzzle from DB: %s\n", err)
 	}
 	log.Printf("Removed %s from DB\n")
 }
 
-func getMainTable(z *html.Tokenizer) {
-	for {
-		tagToken := z.Next()
+//func getMainTable(z *html.Tokenizer) {
+//	for {
+//		tagToken := z.Next()
+//
+//		switch tagToken {
+//		case html.ErrorToken:
+//			// End of the document, we're done
+//			return
+//		case html.StartTagToken:
+//			tagName, hasAtt := z.TagName()
+//			if string(tagName) == "table" && hasAtt {
+//				log.Printf("Found a table")
+//				for att, val, hasMore := z.TagAttr(); hasMore; att, val, hasMore = z.TagAttr() {
+//					log.Printf("Found Att %v with val %v", string(att[:]), string(val[:]))
+//					if string(att[:]) == "class" && strings.Contains(string(val[:]), "wikitable") {
+//						log.Printf("Found something with class wikitable")
+//						return
+//					}
+//				}
+//			}
+//		}
+//	}
+//}
+//
+//func getValuesFromTable(z *html.Tokenizer) []wikiListItem {
+//	theList := make([]wikiListItem, 0, 5000)
+//	columnIndex := 0
+//	currentListItem := new(wikiListItem)
+//	for {
+//		tagToken := z.Next()
+//		switch tagToken {
+//		case html.ErrorToken:
+//			return theList
+//		case html.StartTagToken:
+//			tagName, hasAtt := z.TagName()
+//			if len(tagName) == 2 && tagName[0] == 't' && tagName[1] == 'd' {
+//				columnIndex++
+//			}
+//			if hasAtt && columnIndex == 2 {
+//				for att, val, hasMore := z.TagAttr(); hasMore; att, val, hasMore = z.TagAttr() {
+//					if len(att) == 4 && att[0] == 'h' {
+//						currentListItem.Link = string(val)
+//					}
+//				}
+//			}
+//			if len(tagName) == 2 && tagName[0] == 't' && tagName[1] == 'r' {
+//				columnIndex = 0
+//				currentListItem = new(wikiListItem)
+//			}
+//		case html.TextToken:
+//			switch columnIndex {
+//			case 1:
+//				currentListItem.Rank, _ = strconv.Atoi(string(z.Text()))
+//			case 2:
+//				currentListItem.Title = string(z.Text())
+//			case 13:
+//				currentListItem.Views, _ = strconv.Atoi(string(z.Text()))
+//			}
+//		case html.EndTagToken:
+//			tagName, _ := z.TagName()
+//			if len(tagName) == 2 && tagName[0] == 't' && tagName[1] == 'r' {
+//				log.Printf("End of row")
+//				log.Printf("List Item: %v\n", currentListItem)
+//				theList = append(theList, *currentListItem)
+//			}
+//			if len(tagName) == 5 && string(tagName) == "tbody" {
+//				return theList
+//			}
+//		}
+//	}
+//}
+//
+//func getWikiList(w http.ResponseWriter, r *http.Request) {
+//	resp, err := http.Get("http://en.wikipedia.org/wiki/User:West.andrew.g/Popular_pages")
+//	if err != nil {
+//		log.Printf("Error in HTTP request: %s\n", err)
+//	}
+//	body, err := ioutil.ReadAll(resp.Body)
+//	if err != nil {
+//		log.Printf("Error reading response: %s\n", err)
+//	}
+//	defer resp.Body.Close()
+//
+//	z := html.NewTokenizer(resp.Body)
+//
+//	getMainTable(z)
+//	//theList := getValuesFromTable(z)
+//
+//	//log.Printf("List Item: %v\n", theList[0])
+//
+//	fmt.Fprintf(w, string(body))
+//}
 
-		switch tagToken {
-		case html.ErrorToken:
-			// End of the document, we're done
-			return
-		case html.StartTagToken:
-			tagName, hasAtt := z.TagName()
-			log.Printf("Found a table")
-			if string(tagName) == "table" && hasAtt {
-				log.Printf("Found a table")
-				for att, val, hasMore := z.TagAttr(); hasMore; {
-					log.Printf("Found Att %v with val %v", string(att[:]), string(val[:]))
-					if string(att[:]) == "class" && strings.Contains(string(val[:]), "wikitable") {
-						log.Printf("Found something with class wikitable")
-						return
-					}
-				}
-			}
-		}
+func wikiChallenge(w http.ResponseWriter, r *http.Request) {
+	challengeList := make([]wikiListItem, 10, 10)
+	wikiList := getWikiList()
+	for i, _ := range challengeList {
+		challengeList[i] = wikiList[rand.Intn(len(wikiList))]
 	}
-}
 
-func getValuesFromTable(z *html.Tokenizer) []wikiListItem {
-	theList := make([]wikiListItem, 0, 5000)
-	columnIndex := 0
-	currentListItem := new(wikiListItem)
-	for {
-		tagToken := z.Next()
-		switch tagToken {
-		case html.ErrorToken:
-			return theList
-		case html.StartTagToken:
-			tagName, hasAtt := z.TagName()
-			if len(tagName) == 2 && tagName[0] == 't' && tagName[1] == 'd' {
-				columnIndex++
-			}
-			if hasAtt && columnIndex == 2 {
-				for att, val, hasMore := z.TagAttr(); hasMore; {
-					if len(att) == 4 && att[0] == 'h' {
-						currentListItem.Link = string(val)
-					}
-				}
-			}
-			if len(tagName) == 2 && tagName[0] == 't' && tagName[1] == 'r' {
-				columnIndex = 0
-				currentListItem = new(wikiListItem)
-			}
-		case html.TextToken:
-			switch columnIndex {
-			case 1:
-				currentListItem.Rank, _ = strconv.Atoi(string(z.Text()))
-			case 2:
-				currentListItem.Title = string(z.Text())
-			case 13:
-				currentListItem.Views, _ = strconv.Atoi(string(z.Text()))
-			}
-		case html.EndTagToken:
-			tagName, _ := z.TagName()
-			if len(tagName) == 2 && tagName[0] == 't' && tagName[1] == 'r' {
-				log.Printf("End of row")
-				log.Printf(currentListItem)
-				theList = append(theList, *currentListItem)
-			}
-			if len(tagName) == 5 && string(tagName) == "tbody" {
-				return theList
-			}
-		}
-	}
-}
-
-func getWikiList(w http.ResponseWriter, r *http.Request) {
-	resp, err := http.Get("http://wikipedia.org/wiki/Wikipedia:5000")
+	// output response
+	t, _ := template.ParseFiles("wikiChallenge.html")
+	err := t.Execute(w, challengeList)
 	if err != nil {
-		log.Printf(err)
+		log.Printf("Error %v\n", err)
 	}
-	defer resp.Body.Close()
+}
 
-	z := html.NewTokenizer(resp.Body)
-
-	getMainTable(z)
-	theList := getValuesFromTable(z)
-
-	log.Printf(theList[0])
+func getWikiList() []wikiListItem {
+	if len(WikiList) == 0 {
+		body, err := ioutil.ReadFile("wiki5000.csv")
+		if err != nil {
+			log.Printf("Error loading wiki5000.csv: %s\n", err)
+		}
+		currentItem := new(wikiListItem)
+		lines := bytes.Split(body, []byte{'\n'})
+		for _, line := range lines {
+			parts := bytes.Split(line, []byte{','})
+			for i, p := range parts {
+				switch i {
+				case 0:
+					currentItem.Rank,_ = strconv.Atoi(string(p))
+				case 1:
+					currentItem.Link = string(p)
+				case 2:
+					currentItem.Title = string(p)
+				case 3:
+					currentItem.Views,_ = strconv.Atoi(string(p))
+				}
+			}
+			WikiList = append(WikiList, *currentItem)
+			currentItem = new(wikiListItem)
+		}
+		return WikiList
+	} else {
+		return WikiList
+	}
 }
 
 func parseEnv() {
@@ -572,14 +624,14 @@ func openDB() *sql.DB {
 	cfg.DBName = DBCreds.Name
 	db, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
-		log.Printf(err, nil)
+		log.Printf("Error opening DB connection: %s\n", err)
 	}
 	if err = db.Ping(); err != nil {
-		log.Printf(err, nil)
+		log.Printf("Error pinging DB: %s\n", err)
 	}
 	_, err = db.Exec("CREATE TABLE puzzles (ident VARCHAR(50) UNIQUE NOT NULL, author TEXT, solution TEXT, clues MEDIUMTEXT)")
 	if err != nil && !strings.Contains(err.Error(), "Table 'puzzles' already exists") {
-		log.Printf(err, nil)
+		log.Printf("Error creating table: %s\n", err)
 	}
 	return db
 }
@@ -614,11 +666,11 @@ func main() {
 	http.HandleFunc("/dbClear", dbClear)
 	// deletePuzzle?puzzleId=000
 	http.HandleFunc("/deletePuzzle", deletePuzzle)
-	// getWikiList
-	http.HandleFunc("/getWikiList", getWikiList)
+	// wikiChallenge
+	http.HandleFunc("/wikiChallenge", wikiChallenge)
 
 	http.Handle("/", http.FileServer(http.Dir("assets")))
-	log.Printf(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }
 
 func getAdjective() string {

@@ -1,0 +1,14 @@
+<table>
+<tr>
+<th>Rank</th>
+<th>Concept</th>
+<th>Views</th>
+</tr>
+{{range .}}
+<tr>
+<td>{{.Rank}}</td>
+<td><a href="http://wikipedia.org{{.Link}}">{{.Title}}</a></td>
+<td>{{.Views}}</td>
+</tr>
+{{end}}
+</table>
